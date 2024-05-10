@@ -1,6 +1,8 @@
 import csv
 import sys
 from datetime import datetime
+import calendar
+import json
 
 expense_categories = [
     "rent", "insurance", "utilities", "misc", "entertainment", "health",
@@ -25,10 +27,6 @@ def get_total_income(transactions):
     if (transaction_type == "income"):
       total_income += float(transaction[4])
   return total_income
-
-def get_current_monthly_income(transactions):
-  # get current month
-  pass
 
 
 def display_total_income(transactions):
@@ -208,6 +206,53 @@ def budget_to_float(budget):
   return float(budget[0][0])
 
 
+def view_monthly_summary(transactions, budget):
+  monthly_transactions = {}
+  selected_month = str(datetime.now().month)
+  # populate transactions by month in monthly_transactions
+  for i, transaction in enumerate(transactions):
+    month_num = transaction[1].split("/")[0]
+    # month_name = calendar.month_name[month_num]
+    if (month_num in monthly_transactions):
+      monthly_transactions[month_num].append(transaction)
+    else:
+      monthly_transactions[month_num] = [transaction]
+  print(" ")
+  # handle user selected month
+  for key, value in monthly_transactions.items():
+    month_name = calendar.month_name[int(key)]
+    print("{}) {}".format(key, month_name))
+  while True:
+    selected_month = str(
+        input("Enter month number or Enter for current month: ")
+        or "0" + str(datetime.now().month))
+    print(selected_month)
+    if (selected_month not in monthly_transactions):
+      print("Invalid month. Please try again.")
+      continue
+    else:
+      print("selected: " + selected_month)
+      break
+  print(" ")
+  # calculate and print monthly expenses, income, and remaining budget for selected month
+  monthly_income = 0
+  monthly_expense = 0
+  total_budget = budget_to_float(budget)
+  remaining_budget = 0
+  selected_month_transactions = monthly_transactions[selected_month]
+  for transaction in selected_month_transactions:
+    if (transaction[2] == "income"):
+      monthly_income = monthly_income + float(transaction[4])
+    else:
+      monthly_expense = monthly_expense + float(transaction[4])
+  remaining_budget = total_budget - abs(monthly_expense)
+  print("Current budget: " + str(total_budget))
+  print("Monthly Income: " + str(monthly_income))
+  print(f"Monthly Expense: {monthly_expense}")
+  print(f"Remaining Budget: {remaining_budget}")
+  # print(json.dumps(monthly_transactions, indent=4))
+
+
 def read_budget():
   try:
     budget = []
@@ -237,6 +282,7 @@ def display_menu():
   print("total_income - View total income")
   print("delete -  Delete a transaction")
   print("update -  Update a transaction")
+  print("sum -  View monthly summary")
   print("exit - Exit program")
   print()
 
@@ -248,19 +294,23 @@ while True:
     list_transactions(transactions)
   elif command.lower() == "income":
     add_income(transactions)
+    transactions = read_transactions()
   elif command.lower() == "expense":
     add_expense(transactions)
+    transactions = read_transactions()
   elif command.lower() == "total_income":
     display_total_income(transactions)
   elif command.lower() == "add_budget":
     add_budget(budget)
-    pass
+    budget = read_budget()
   elif command.lower() == "delete":
     delete_transaction(transactions)
     transactions = read_transactions()
   elif command.lower() == "update":
     update_transaction(transactions)
     transactions = read_transactions()
+  elif command.lower() == "sum":
+    view_monthly_summary(transactions, budget)
   elif command.lower() == "exit":
     print("Goodbye!")
     break
