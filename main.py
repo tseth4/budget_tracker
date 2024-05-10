@@ -2,7 +2,7 @@ import csv
 import sys
 from datetime import datetime
 import calendar
-import json
+# import json
 
 expense_categories = [
     "rent", "insurance", "utilities", "misc", "entertainment", "health",
@@ -212,7 +212,6 @@ def view_monthly_summary(transactions, budget):
   # populate transactions by month in monthly_transactions
   for i, transaction in enumerate(transactions):
     month_num = transaction[1].split("/")[0]
-    # month_name = calendar.month_name[month_num]
     if (month_num in monthly_transactions):
       monthly_transactions[month_num].append(transaction)
     else:
@@ -226,12 +225,11 @@ def view_monthly_summary(transactions, budget):
     selected_month = str(
         input("Enter month number or Enter for current month: ")
         or "0" + str(datetime.now().month))
-    print(selected_month)
     if (selected_month not in monthly_transactions):
       print("Invalid month. Please try again.")
       continue
     else:
-      print("selected: " + selected_month)
+      print("Selected month: " + selected_month)
       break
   print(" ")
   # calculate and print monthly expenses, income, and remaining budget for selected month
@@ -246,11 +244,24 @@ def view_monthly_summary(transactions, budget):
     else:
       monthly_expense = monthly_expense + float(transaction[4])
   remaining_budget = total_budget - abs(monthly_expense)
-  print("Current budget: " + str(total_budget))
   print("Monthly Income: " + str(monthly_income))
+  print("Current budget: " + str(total_budget))
   print(f"Monthly Expense: {monthly_expense}")
   print(f"Remaining Budget: {remaining_budget}")
-  # print(json.dumps(monthly_transactions, indent=4))
+  # expenses by category
+  print(" ")
+  print("CATEGORIES OF EXPENSES: ")
+  expense_categories = {}
+  for transaction in selected_month_transactions:
+    if (transaction[2] == "expense" and transaction[3] in expense_categories):
+      expense_categories[
+          transaction[3]] = expense_categories[transaction[3]] + abs(
+              float(transaction[4]))
+    elif (transaction[2] == "expense"):
+      expense_categories[transaction[3]] = abs(float(transaction[4]))
+  for key, value in expense_categories.items():
+    print(f"{key}: {value}")
+  # print(json.dumps(expense_categories, indent=4))
 
 
 def read_budget():
