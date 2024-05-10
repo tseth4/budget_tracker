@@ -3,14 +3,14 @@ import sys
 from datetime import datetime
 
 expense_categories = [
-    "Rent", "Insurance", "Utilities", "Misc", "Entertainment", "Health",
-    "Groceries", "Other"
+    "rent", "insurance", "utilities", "misc", "entertainment", "health",
+    "groceries", "other"
 ]
 
-income_categories = ["Salary", "Other"]
+income_categories = ["salary", "other"]
 
 TRANSACTIONS_FILENAME = "transactions.csv"
-SPEC_FILENAME = "spec.csv"
+BUDGET_FILENAME = "budget.csv"
 
 
 def exit_program():
@@ -25,6 +25,10 @@ def get_total_income(transactions):
     if (transaction_type == "income"):
       total_income += float(transaction[4])
   return total_income
+
+def get_current_monthly_income(transactions):
+  # get current month
+  pass
 
 
 def display_total_income(transactions):
@@ -52,6 +56,16 @@ def write_transactions(transactions):
     exit_program()
 
 
+def write_budget(budget):
+  try:
+    with open(BUDGET_FILENAME, "w", newline="") as file:
+      writer = csv.writer(file)
+      writer.writerows(budget)
+  except Exception as e:
+    print(type(e), e)
+    exit_program()
+
+
 def list_transactions(transactions):
   for i, transaction in enumerate(transactions):
     print(
@@ -65,7 +79,7 @@ def category_input(type):
   category = "Other"
   list_categories(type)
   while True:
-    category = input("Enter category: ")
+    category = input("Enter category: ").lower()
     if category in temp_categories:
       return category
     else:
@@ -157,8 +171,8 @@ def update_transaction(transactions):
     if (transaction[0] == transaction_id):
       date = input(
           "Enter date (MM/DD/YYYY) or Enter for unchanged: ") or transaction[1]
-      type = input(
-          "Expense or Income) or Enter for unchanged: ").lower() or transaction[2]
+      type = input("Expense or Income) or Enter for unchanged: ").lower(
+      ) or transaction[2]
       category = category_input(type)
       amount = amount_input(type)
       transactions[i] = [transaction_id, date, type, category, amount]
@@ -168,16 +182,38 @@ def update_transaction(transactions):
     print("Transaction was not found.\n")
   else:
     write_transactions(transactions)
-  pass
+
+
+def add_budget(budget):
+  total_income = get_total_income(transactions)
+  budget_float = budget_to_float(budget)
+  print("Current monthly budget: " + str(budget_float))
+  print(type(budget_float))
+  print("Current monthly income: " + str(total_income))
+  print(" ")
+  while True:
+    new_budget = float(
+        input("Update budget or Enter for unchanged: ") or budget_float)
+    if (new_budget > total_income):
+      print("Budget must be less than income")
+      continue
+    else:
+      print("Updating budget")
+      break
+  budget[0] = [new_budget]
+  write_budget(budget)
+
+
+def budget_to_float(budget):
+  return float(budget[0][0])
 
 
 def read_budget():
   try:
     budget = []
-    with open(SPEC_FILENAME, newline='') as file:
+    with open(BUDGET_FILENAME, newline='') as file:
       reader = csv.reader(file)
       budget = list(reader)
-      budget = float(budget[0][0])
     return budget
   except Exception as e:
     print(type(e), e)
@@ -190,9 +226,10 @@ budget = read_budget()
 
 def display_menu():
   print("The Budget List program")
-  print("Budget: " + str(budget))
+  print("Budget: " + str(budget_to_float(budget)))
   print()
-  print("LIST OF COMMANDS")
+  print("LIST OF COMMANDS: ")
+  print("")
   print("list - List all transactions")
   print("income -  Add income")
   print("expense -  Add expense")
@@ -205,7 +242,6 @@ def display_menu():
 
 
 display_menu()
-# print(transactions)
 while True:
   command = input("Command: ")
   if command.lower() == "list":
@@ -217,6 +253,7 @@ while True:
   elif command.lower() == "total_income":
     display_total_income(transactions)
   elif command.lower() == "add_budget":
+    add_budget(budget)
     pass
   elif command.lower() == "delete":
     delete_transaction(transactions)
