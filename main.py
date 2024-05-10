@@ -19,7 +19,17 @@ def exit_program():
 
 
 def get_total_income(transactions):
-  pass
+  total_income = 0
+  for i, transaction in enumerate(transactions):
+    transaction_type = transaction[2]
+    if (transaction_type == "income"):
+      total_income += float(transaction[4])
+  return total_income
+
+
+def display_total_income(transactions):
+  total_income = get_total_income(transactions)
+  print(f"Total Income: ${total_income:.2f}")
 
 
 def list_categories(type):
@@ -43,9 +53,9 @@ def write_transactions(transactions):
 
 
 def list_transactions(transactions):
-  for i, transaction in enumerate(transactions, start=1):
+  for i, transaction in enumerate(transactions):
     print(
-        f"{i}. Transaction ID: {transaction[0]} (Date: {transaction[1]}) (Type: {transaction[2]}) (Category: {transaction[3]}) (Amount: {transaction[4]})"
+        f"Transaction ID: {transaction[0]} (Date: {transaction[1]}) (Type: {transaction[2]}) (Category: {transaction[3]}) (Amount: {transaction[4]})"
     )
   print()
 
@@ -84,8 +94,7 @@ def add_expense(transactions):
   date = input("Enter date (MM/DD/YYYY) or Enter for today: ") or datetime.now(
   ).date().strftime("%m/%d/%Y")
   category = category_input("expense")
-  amount = float(input("Enter amount: "))
-  amount = 0 - amount
+  amount = amount_input("expense")
   new_transaction = [new_id, date, "expense", category, amount]
   transactions.append(new_transaction)
   write_transactions(transactions)
@@ -100,11 +109,18 @@ def add_income(transactions):
   date = input("Enter date (MM/DD/YYYY) or Enter for today: ") or datetime.now(
   ).date().strftime("%m/%d/%Y")
   category = category_input("income")
-  amount = float(input("Enter amount: "))
+  amount = amount_input("income")
   new_transaction = [new_id, date, "income", category, amount]
   transactions.append(new_transaction)
   write_transactions(transactions)
   print(f"Transaction {new_id}: was added.\n")
+
+
+def amount_input(type):
+  amount = float(input("Enter amount: "))
+  if type.lower() == "expense":
+    amount = 0 - amount
+  return amount
 
 
 def read_transactions():
@@ -119,28 +135,69 @@ def read_transactions():
     exit_program()
 
 
+def delete_transaction(transactions):
+  found = False
+  transaction_id = input("Enter the transaction ID: ")
+  for i, transaction in enumerate(transactions, start=0):
+    if (transaction[0] == transaction_id):
+      print("transaction {} was deleted.\n".format(transaction_id))
+      transactions.pop(i)
+      found = True
+
+  if (found == False):
+    print("Employee was not found.\n")
+  else:
+    write_transactions(transactions)
+
+
+def update_transaction(transactions):
+  transaction_id = input("Enter the transaction ID: ")
+  found = False
+  for i, transaction in enumerate(transactions, start=0):
+    if (transaction[0] == transaction_id):
+      date = input(
+          "Enter date (MM/DD/YYYY) or Enter for unchanged: ") or transaction[1]
+      type = input(
+          "Expense or Income) or Enter for unchanged: ").lower() or transaction[2]
+      category = category_input(type)
+      amount = amount_input(type)
+      transactions[i] = [transaction_id, date, type, category, amount]
+      print("Transaction {} was updated.\n".format(transaction_id))
+      found = True
+  if (found == False):
+    print("Transaction was not found.\n")
+  else:
+    write_transactions(transactions)
+  pass
+
+
 def read_budget():
   try:
     budget = []
     with open(SPEC_FILENAME, newline='') as file:
       reader = csv.reader(file)
       budget = list(reader)
-      print("budget: ")
-      print(budget)
+      budget = float(budget[0][0])
     return budget
   except Exception as e:
     print(type(e), e)
     exit_program()
 
 
+transactions = read_transactions()
+budget = read_budget()
+
+
 def display_menu():
-  print("The Employee Salary List program")
+  print("The Budget List program")
+  print("Budget: " + str(budget))
   print()
   print("LIST OF COMMANDS")
   print("list - List all transactions")
   print("income -  Add income")
   print("expense -  Add expense")
   print("add_budget - Add budget")
+  print("total_income - View total income")
   print("delete -  Delete a transaction")
   print("update -  Update a transaction")
   print("exit - Exit program")
@@ -148,28 +205,25 @@ def display_menu():
 
 
 display_menu()
-transactions = read_transactions()
-budget = read_budget()
 # print(transactions)
 while True:
   command = input("Command: ")
   if command.lower() == "list":
     list_transactions(transactions)
-    print("list command entered")
-    # list_employees(employees)
   elif command.lower() == "income":
     add_income(transactions)
-    # print("income command entered")
   elif command.lower() == "expense":
     add_expense(transactions)
+  elif command.lower() == "total_income":
+    display_total_income(transactions)
   elif command.lower() == "add_budget":
     pass
-  elif command.lower() == "del":
-    print("del command entered")
-    # delete_employee(employees)
-  elif command.lower() == "updid":
-    print("upid command entered")
-    # upd_id(employees)
+  elif command.lower() == "delete":
+    delete_transaction(transactions)
+    transactions = read_transactions()
+  elif command.lower() == "update":
+    update_transaction(transactions)
+    transactions = read_transactions()
   elif command.lower() == "exit":
     print("Goodbye!")
     break
