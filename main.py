@@ -2,24 +2,35 @@ import csv
 import sys
 from datetime import datetime
 import calendar
-# import json
+import re
 
+# Specified expense categories
 expense_categories = [
     "rent", "insurance", "utilities", "misc", "entertainment", "health",
     "groceries", "other"
 ]
 
+# Specified income categories
 income_categories = ["salary", "other"]
 
+# csv paths
 TRANSACTIONS_FILENAME = "transactions.csv"
 BUDGET_FILENAME = "budget.csv"
 
-
+# exit program
 def exit_program():
   print("Terminating program.")
   sys.exit()
 
+# check if date matches MM/DD/YYYY format
+def is_valid_date(date_str):
+  pattern = r"^(0?[1-9]|1[0-2])/(0?[1-9]|[12]\d|3[01])/(\d{4})$"
+  if re.match(pattern, date_str):
+    return True
+  else:
+    return False
 
+# Sum all income transaction amounts
 def get_total_income(transactions):
   total_income = 0
   for i, transaction in enumerate(transactions):
@@ -29,21 +40,23 @@ def get_total_income(transactions):
   return total_income
 
 
+# print total income transaction amounts
 def display_total_income(transactions):
   total_income = get_total_income(transactions)
   print(f"Total Income: ${total_income:.2f}")
 
 
+# List all categorozations depending on type "expense" | "income"
 def list_categories(type):
   print("CATEGORIES: ")
   if type == "expense":
     for i, category in enumerate(expense_categories):
-      print(f"{i + 1}. {category}")
+      print(f"{category}")
   else:
     for i, category in enumerate(income_categories):
       print(f"{i + 1}. {category}")
 
-
+# Helper function to write transactions back to csv
 def write_transactions(transactions):
   try:
     with open(TRANSACTIONS_FILENAME, "w", newline="") as file:
@@ -53,7 +66,7 @@ def write_transactions(transactions):
     print(type(e), e)
     exit_program()
 
-
+# Function to write budget back to budget.csv
 def write_budget(budget):
   try:
     with open(BUDGET_FILENAME, "w", newline="") as file:
@@ -64,7 +77,11 @@ def write_budget(budget):
     exit_program()
 
 
+# Printing all transactions to the console
 def list_transactions(transactions):
+  if (len(transactions) == 0):
+    print("No transactions found.")
+    return
   for i, transaction in enumerate(transactions):
     print(
         f"Transaction ID: {transaction[0]} (Date: {transaction[1]}) (Type: {transaction[2]}) (Category: {transaction[3]}) (Amount: {transaction[4]})"
@@ -72,6 +89,7 @@ def list_transactions(transactions):
   print()
 
 
+# Handle and validate category input
 def category_input(type):
   temp_categories = expense_categories if type == "expense" else income_categories
   category = "Other"
@@ -84,57 +102,54 @@ def category_input(type):
       print("Invalid category. Please try again.")
       continue
 
-
-def get_expense_amount_input():
+# Handle and validate date input
+def get_date_input(spec_date=None):
   while True:
-    amount = float(input("Enter expense amount: "))
-    if amount > 0:
-      return amount
+    if (spec_date):
+      date = input("Enter date (MM/DD/YYYY) or Enter to skip: ") or spec_date
+      pass
     else:
-      print("Invalid amount, must be greater than 0. Please try again")
+      date = input("Enter date (MM/DD/YYYY) or Enter for today: "
+                   ) or datetime.now().date().strftime("%m/%d/%Y")
+    if is_valid_date(date):
+      return date
+    else:
+      print(
+          "Invalid date format. Please enter date in MM/DD/YYYY format or Enter for today."
+      )
       continue
 
 
-# Differences
-def add_expense(transactions):
-  last_id = 0
-  if (len(transactions) != 0):
-    last_id = int(transactions[-1][0])
-  print("lastid: " + str(last_id))
-  print(transactions[-1])
-  new_id = last_id + 1
-  date = input("Enter date (MM/DD/YYYY) or Enter for today: ") or datetime.now(
-  ).date().strftime("%m/%d/%Y")
-  category = category_input("expense")
-  amount = amount_input("expense")
-  new_transaction = [new_id, date, "expense", category, amount]
-  transactions.append(new_transaction)
-  write_transactions(transactions)
-  print(f"Transaction {new_id}: was added.\n")
-
-
-def add_income(transactions):
+# Add transaction based to type "expense" | "income", use helper write_transactions to write to csv
+def add_transaction(transactions, type):
   last_id = 0
   if (len(transactions) != 0):
     last_id = int(transactions[-1][0])
   new_id = last_id + 1
-  date = input("Enter date (MM/DD/YYYY) or Enter for today: ") or datetime.now(
-  ).date().strftime("%m/%d/%Y")
-  category = category_input("income")
-  amount = amount_input("income")
-  new_transaction = [new_id, date, "income", category, amount]
+  date = get_date_input()
+  category = category_input(type)
+  amount = amount_input(type)
+  new_transaction = [new_id, date, type, category, amount]
   transactions.append(new_transaction)
   write_transactions(transactions)
   print(f"Transaction {new_id}: was added.\n")
 
-
+# Handle and validate amount input
 def amount_input(type):
-  amount = float(input("Enter amount: "))
-  if type.lower() == "expense":
-    amount = 0 - amount
-  return amount
+  while True:
+    try:
+      amount = float(input("Enter amount: "))
+      if (amount > 0):
+        if type.lower() == "expense":
+          amount = 0 - amount
+        return amount
+      else:
+        print("Invalid amount, must be greater than 0. Please try again")
+        continue
+    except ValueError:
+      print("Invalid input, must be positive number. Please try again.")
 
-
+# Helper to read and return all transactions from csv
 def read_transactions():
   try:
     transactions = []
@@ -146,7 +161,7 @@ def read_transactions():
     print(type(e), e)
     exit_program()
 
-
+# Delete transaction method and write to csv
 def delete_transaction(transactions):
   found = False
   transaction_id = input("Enter the transaction ID: ")
@@ -157,20 +172,18 @@ def delete_transaction(transactions):
       found = True
 
   if (found == False):
-    print("Employee was not found.\n")
+    print("Transaction was not found.\n")
   else:
     write_transactions(transactions)
 
-
+# Update transaction method and write back to csv
 def update_transaction(transactions):
   transaction_id = input("Enter the transaction ID: ")
   found = False
   for i, transaction in enumerate(transactions, start=0):
     if (transaction[0] == transaction_id):
-      date = input(
-          "Enter date (MM/DD/YYYY) or Enter for unchanged: ") or transaction[1]
-      type = input("Expense or Income) or Enter for unchanged: ").lower(
-      ) or transaction[2]
+      date = get_date_input(transaction[1])
+      type = transaction[2]
       category = category_input(type)
       amount = amount_input(type)
       transactions[i] = [transaction_id, date, type, category, amount]
@@ -181,55 +194,58 @@ def update_transaction(transactions):
   else:
     write_transactions(transactions)
 
-
+# add a budget and use helper write_budget to write to csv
 def add_budget(budget):
   total_income = get_total_income(transactions)
   budget_float = budget_to_float(budget)
-  print("Current monthly budget: " + str(budget_float))
-  print(type(budget_float))
-  print("Current monthly income: " + str(total_income))
   print(" ")
-  while True:
-    new_budget = float(
-        input("Update budget or Enter for unchanged: ") or budget_float)
-    if (new_budget > total_income):
-      print("Budget must be less than income")
-      continue
-    else:
-      print("Updating budget")
-      break
+  new_budget = amount_input("budget")
   budget[0] = [new_budget]
   write_budget(budget)
+  print("Monthly budget updated")
 
 
+  # Helper to convert budget to float
 def budget_to_float(budget):
   return float(budget[0][0])
 
-
+# Function to view monthly summary
 def view_monthly_summary(transactions, budget):
-  monthly_transactions = {}
+  if (len(transactions) == 0):
+    print("No transactions found.")
+    return
+  monthyear_transactions = {}
   selected_month = str(datetime.now().month)
   # populate transactions by month in monthly_transactions
   for i, transaction in enumerate(transactions):
     month_num = transaction[1].split("/")[0]
-    if (month_num in monthly_transactions):
-      monthly_transactions[month_num].append(transaction)
+    year_num = transaction[1].split("/")[2]
+    month_year = month_num + "/" + year_num
+    if (month_year in monthyear_transactions):
+      monthyear_transactions[month_year].append(transaction)
     else:
-      monthly_transactions[month_num] = [transaction]
+      monthyear_transactions[month_year] = [transaction]
   print(" ")
   # handle user selected month
-  for key, value in monthly_transactions.items():
-    month_name = calendar.month_name[int(key)]
-    print("{}) {}".format(key, month_name))
+  for key, value in monthyear_transactions.items():
+    month_key = key.split("/")[0]
+    year_key = key.split("/")[1]
+    month_name = calendar.month_name[int(month_key)]
+    # year_name = calendar.year_name[int(year_key)]
+    print("{}) {}".format(key, month_name) + " " + year_key)
+  print("month year_transactions: ")
+  # print(json.dumps(monthyear_transactions, indent=4))
   while True:
-    selected_month = str(
-        input("Enter month number or Enter for current month: ")
-        or "0" + str(datetime.now().month))
-    if (selected_month not in monthly_transactions):
-      print("Invalid month. Please try again.")
+    current_month_year = "0" + str(datetime.now().month) + "/" + str(
+        datetime.now().year)
+    selected_month_year = input(
+        "Enter date key (MM/YYYY) or Enter for current month and year: "
+    ) or current_month_year
+    if (selected_month_year not in monthyear_transactions):
+      print("Invalid month and year. Please try again.")
       continue
     else:
-      print("Selected month: " + selected_month)
+      print("Selected month year: " + selected_month_year)
       break
   print(" ")
   # calculate and print monthly expenses, income, and remaining budget for selected month
@@ -237,8 +253,8 @@ def view_monthly_summary(transactions, budget):
   monthly_expense = 0
   total_budget = budget_to_float(budget)
   remaining_budget = 0
-  selected_month_transactions = monthly_transactions[selected_month]
-  for transaction in selected_month_transactions:
+  selected_monthyear_transactions = monthyear_transactions[selected_month_year]
+  for transaction in selected_monthyear_transactions:
     if (transaction[2] == "income"):
       monthly_income = monthly_income + float(transaction[4])
     else:
@@ -248,22 +264,23 @@ def view_monthly_summary(transactions, budget):
   print("Current budget: " + str(total_budget))
   print(f"Monthly Expense: {monthly_expense}")
   print(f"Remaining Budget: {remaining_budget}")
-  # expenses by category
+  # print expenses by category
   print(" ")
   print("CATEGORIES OF EXPENSES: ")
   expense_categories = {}
-  for transaction in selected_month_transactions:
+  # Populate expense_categories with expense categories and their total amount
+  for transaction in selected_monthyear_transactions:
     if (transaction[2] == "expense" and transaction[3] in expense_categories):
       expense_categories[
           transaction[3]] = expense_categories[transaction[3]] + abs(
               float(transaction[4]))
     elif (transaction[2] == "expense"):
       expense_categories[transaction[3]] = abs(float(transaction[4]))
+  # Print expense categories and their total amount
   for key, value in expense_categories.items():
     print(f"{key}: {value}")
-  # print(json.dumps(expense_categories, indent=4))
 
-
+# Read budget.csv
 def read_budget():
   try:
     budget = []
@@ -275,7 +292,7 @@ def read_budget():
     print(type(e), e)
     exit_program()
 
-
+# call functions on initial run
 transactions = read_transactions()
 budget = read_budget()
 
@@ -297,17 +314,18 @@ def display_menu():
   print("exit - Exit program")
   print()
 
-
+# Call display menu on initial run
 display_menu()
+# Listen to user initial user input
 while True:
   command = input("Command: ")
   if command.lower() == "list":
     list_transactions(transactions)
   elif command.lower() == "income":
-    add_income(transactions)
+    add_transaction(transactions, "income")
     transactions = read_transactions()
   elif command.lower() == "expense":
-    add_expense(transactions)
+    add_transaction(transactions, "expense")
     transactions = read_transactions()
   elif command.lower() == "total_income":
     display_total_income(transactions)
