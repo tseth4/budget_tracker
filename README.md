@@ -13,7 +13,7 @@ The Budget Tracker is a command-line application to manage your personal finance
 - **`transactions.old`**: Backup of transaction data.
 
 ## How to Run
-1. Make sure Python 3.6 or later is installed.
+1. Make sure Python is installed.
 2. Run the program using:
    ```bash
    python main.py
